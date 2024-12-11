@@ -7,7 +7,6 @@ from SampleValidationThreads import SampleValidationThreads
 from SampleValidationSerial import SampleValidationSerial
 from SampleValidationCUDA import SampleValidationCUDA
 
-# import SampleValidationCUDA
 num_joints = int(sys.argv[1])
 current_obstacles = ["NONE", "SIMPLE", "HARD", "SUPER"]
 serial = SampleValidationSerial()
