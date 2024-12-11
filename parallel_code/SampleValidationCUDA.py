@@ -23,7 +23,7 @@ class SampleValidationCUDA:
         }
 
         __global__ void validate_segment(float *q_start, float *q_end, float *result, float step_size, int num_segs) {
-            extern __shared__ int shared_result
+            extern __shared__ int shared_result;
             int idx = blockIdx.x * blockDim.x + threadIdx.x;
             if (idx < num_segs && shared_result == 0) {
                 float t = (float)idx / (num_segs - 1);
@@ -40,7 +40,7 @@ class SampleValidationCUDA:
             }
         }
         """
-        self.mod = SourceModule(self.cuda_kernel_code)
+        self.mod = SourceModule(self.cuda_kernel_code, no_extern_c=True)
         self.validate_segment_kernel = self.mod.get_function("validate_segment")
 
     def trajectory_sample(self):
