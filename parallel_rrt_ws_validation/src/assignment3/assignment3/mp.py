@@ -23,9 +23,12 @@ import math
 import threading
 import queue
 import os
+from openpyxl import load_workbook
 from scipy.linalg import lu_factor, lu_solve
 os.environ['OMP_NUM_THREADS'] = '8'
 os.environ['MKL_NUM_THREADS'] = '8'
+
+
 
 # -------------------- Multithreaded utilities --------------------
 import numpy as np
@@ -71,6 +74,29 @@ def convert_to_message(T):
     return t
 
 class MoveArm(Node):
+    def append_to_excel(self, tree_expansion_time, validation_time):
+        # Path to the Excel file
+        excel_path = "/home/moises/Downloads/Results.xlsx"
+        # Load the workbook and select the active sheet
+        workbook = load_workbook(excel_path)
+        sheet = workbook.active
+        
+        # Helper function to append value to a cell
+        def append_to_cell(cell, new_value):
+            current_value = sheet[cell].value
+            if current_value is None:
+                sheet[cell] = str(new_value)
+            else:
+                sheet[cell] = f"{current_value}, {new_value}"
+        
+        # Append values to appropriate cells
+        append_to_cell(f"B{self.row}", tree_expansion_time)
+        append_to_cell(f"C{self.row}", validation_time)
+
+        self.row += 1 
+        # Save changes to the Excel file
+        workbook.save(excel_path)
+
     def __init__(self):
         super().__init__('move_arm')
 
@@ -79,6 +105,7 @@ class MoveArm(Node):
         self.num_joints = 0
         self.joint_names = []
         self.joint_axes = []
+        self.row = 14
         self.declare_parameter('rd_file', rclpy.Parameter.Type.STRING)
         robot_desription = self.get_parameter('rd_file').value
         with open(robot_desription, 'r') as file:
@@ -211,6 +238,7 @@ class MoveArm(Node):
 
         self.get_logger().info(f"TREE EXPANSION COMPLETE (took {tree_expansion_duration:.4f} seconds)")
         self.get_logger().info(f"VALIDATION COMPLETE (took {validation_time:.4f} seconds)")
+        self.append_to_excel(tree_expansion_duration, validation_time)
 
         shortcut_start = time.time()
         shortcut_path = [path[0]]  
@@ -253,6 +281,7 @@ class MoveArm(Node):
             point = JointTrajectoryPoint()
             point.positions = q
             trajectory.points.append(point)
+        
         
         self.pub.publish(trajectory)
 

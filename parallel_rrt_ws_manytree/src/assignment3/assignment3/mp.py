@@ -22,6 +22,7 @@ import copy
 import math
 import threading
 import queue
+from openpyxl import load_workbook
 import os
 
 def convert_to_message(T):
@@ -43,11 +44,36 @@ class RRTBranch(object):
         self.q = q
 
 class MoveArm(Node):
+
+    def append_to_excel(self, tree_expansion_time, validation_time):
+        # Path to the Excel file
+        excel_path = "/home/moises/Downloads/Results.xlsx"
+        # Load the workbook and select the active sheet
+        workbook = load_workbook(excel_path)
+        sheet = workbook.active
+        
+        # Helper function to append value to a cell
+        def append_to_cell(cell, new_value):
+            current_value = sheet[cell].value
+            if current_value is None:
+                sheet[cell] = str(new_value)
+            else:
+                sheet[cell] = f"{current_value}, {new_value}"
+        
+        # Append values to appropriate cells
+        append_to_cell(f"B{self.row}", tree_expansion_time)
+        append_to_cell(f"C{self.row}", validation_time)
+
+        self.row += 1 
+        # Save changes to the Excel file
+        workbook.save(excel_path)
+
     def __init__(self):
         super().__init__('move_arm')
 
         #Loads the robot model, which contains the robot's kinematics information
         self.ee_goal = None
+        self.row = 10
         self.num_joints = 0
         self.joint_names = []
         self.joint_axes = []
@@ -155,7 +181,7 @@ class MoveArm(Node):
         # Wait for the first solution
         try:
             # This will block until the first solution is put into q_result
-            solution_tree = q_result.get(timeout=30.0)  # wait up to 30 seconds, for example
+            solution_tree = q_result.get(timeout=2000.0)  # wait up to 30 seconds, for example
         except queue.Empty:
             self.get_logger().error("No path found by any thread.")
             return
@@ -183,6 +209,7 @@ class MoveArm(Node):
         tree_expansion_duration = raw_path_end - raw_path_start - validation_time
         self.get_logger().info(f"TREE EXPANSION COMPLETE (took {tree_expansion_duration:.4f} seconds)")
         self.get_logger().info(f"VALIDATION COMPLETE (took {validation_time:.4f} seconds)")
+        self.append_to_excel(tree_expansion_duration, validation_time)
 
         # Timing shortcutting + resampling
         shortcut_start = time.time()

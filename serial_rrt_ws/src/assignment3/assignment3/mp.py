@@ -20,6 +20,10 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 import copy
 import math
+from openpyxl import load_workbook
+
+
+
 
 def convert_to_message(T):
     t = Pose()
@@ -35,12 +39,37 @@ def convert_to_message(T):
     return t
 
 class MoveArm(Node):
+
+    def append_to_excel(self, tree_expansion_time, validation_time):
+        # Path to the Excel file
+        excel_path = "/home/moises/Downloads/Results.xlsx"
+        # Load the workbook and select the active sheet
+        workbook = load_workbook(excel_path)
+        sheet = workbook.active
+        
+        # Helper function to append value to a cell
+        def append_to_cell(cell, new_value):
+            current_value = sheet[cell].value
+            if current_value is None:
+                sheet[cell] = str(new_value)
+            else:
+                sheet[cell] = f"{current_value}, {new_value}"
+        
+        # Append values to appropriate cells
+        append_to_cell(f"B{self.row}", tree_expansion_time)
+        append_to_cell(f"C{self.row}", validation_time)
+
+        self.row += 1 
+        # Save changes to the Excel file
+        workbook.save(excel_path)
+
     def __init__(self):
         super().__init__('move_arm')
 
         #Loads the robot model, which contains the robot's kinematics information
         self.ee_goal = None
         self.num_joints = 0
+        self.row = 2
         self.joint_names = []
         self.joint_axes = []
         #Loads the robot model, which contains the robot's kinematics information
@@ -176,6 +205,7 @@ class MoveArm(Node):
         tree_expansion_duration = raw_path_end - raw_path_start - validation_time
         self.get_logger().info(f"TREE EXPANSION COMPLETE (took {tree_expansion_duration:.4f} seconds)")
         self.get_logger().info(f"VALIDATION COMPLETE (took {validation_time:.4f} seconds)") 
+        self.append_to_excel(tree_expansion_duration, validation_time)
 
         # Timing shortcutting + resampling
         shortcut_start = time.time()
